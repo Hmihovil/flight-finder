@@ -1,4 +1,4 @@
-package com.innovation.calendar.service;
+package com.innovation.flights.service;
 
 import com.google.api.client.auth.oauth2.Credential;
 import com.google.api.client.extensions.java6.auth.oauth2.AuthorizationCodeInstalledApp;
@@ -10,9 +10,10 @@ import com.google.api.client.http.HttpTransport;
 import com.google.api.client.json.JsonFactory;
 import com.google.api.client.json.jackson2.JacksonFactory;
 import com.google.api.client.util.store.FileDataStoreFactory;
-import com.google.api.services.calendar.Calendar;
 import com.google.api.services.calendar.CalendarScopes;
-import com.innovation.calendar.main.Runner;
+import com.google.api.services.gmail.GmailScopes;
+import com.google.common.collect.ImmutableSet;
+import com.innovation.flights.main.Runner;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -21,18 +22,17 @@ import java.util.Set;
 
 import static java.util.Collections.singleton;
 
-public class CalendarServiceFactory {
+public class GoogleServiceFactoryCredentials {
     /**
      * Application name.
      */
-    private static final String APPLICATION_NAME =
-            "Calendar Checker";
+    private static final String APPLICATION_NAME = "Flight Finder";
 
     /**
      * Directory to store user credentials for this application.
      */
     private static final java.io.File DATA_STORE_DIR = new java.io.File(
-            System.getProperty("user.home"), ".credentials/calendar-java-quickstart");
+            System.getProperty("user.home"), ".credentials/flight-finder-java-quickstart");
 
     /**
      * Global instance of the JSON factory.
@@ -43,9 +43,9 @@ public class CalendarServiceFactory {
      * Global instance of the scopes required by this quickstart.
      * <p>
      * If modifying these scopes, delete your previously saved credentials
-     * at ~/.credentials/calendar-java-quickstart
+     * at ~/.credentials/flight-finder-java-quickstart
      */
-    private static final Set<String> SCOPES = singleton(CalendarScopes.CALENDAR_READONLY);
+    private static final Set<String> SCOPES = ImmutableSet.of(CalendarScopes.CALENDAR_READONLY, GmailScopes.GMAIL_READONLY);
     /**
      * Global instance of the {@link FileDataStoreFactory}.
      */
@@ -65,13 +65,25 @@ public class CalendarServiceFactory {
         }
     }
 
+    static String applicationName() {
+        return APPLICATION_NAME;
+    }
+
+    static JsonFactory jsonFactory() {
+        return JSON_FACTORY;
+    }
+
+    static HttpTransport httpTransport() {
+        return HTTP_TRANSPORT;
+    }
+
     /**
      * Creates an authorized Credential object.
      *
      * @return an authorized Credential object.
      * @throws IOException
      */
-    private static Credential getCredentials() throws IOException {
+    static Credential getCredentials() throws IOException {
         // Load client secrets.
         InputStream in = Runner.class.getResourceAsStream("/client_secret.json");
         GoogleClientSecrets clientSecrets = GoogleClientSecrets.load(JSON_FACTORY, new InputStreamReader(in));
@@ -87,11 +99,5 @@ public class CalendarServiceFactory {
         System.out.println("Credentials saved to " + DATA_STORE_DIR.getAbsolutePath());
 
         return credential;
-    }
-
-    public static Calendar getCalendarService() throws IOException {
-        return new Calendar.Builder(HTTP_TRANSPORT, JSON_FACTORY, getCredentials())
-                .setApplicationName(APPLICATION_NAME)
-                .build();
     }
 }
