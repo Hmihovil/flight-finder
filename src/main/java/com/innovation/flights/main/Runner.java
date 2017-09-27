@@ -2,12 +2,17 @@ package com.innovation.flights.main;
 
 import com.google.api.services.calendar.model.Event;
 import com.google.api.services.calendar.model.Events;
-import com.google.api.services.gmail.model.Label;
-import com.google.api.services.gmail.model.ListLabelsResponse;
+import com.google.api.services.gmail.model.ListMessagesResponse;
+import com.google.api.services.gmail.model.Message;
+import com.google.api.services.gmail.model.MessagePart;
+import com.google.api.services.gmail.model.MessagePartBody;
 
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.List;
+import java.util.stream.Collectors;
 
+import static com.google.api.client.repackaged.org.apache.commons.codec.binary.Base64.decodeBase64;
 import static com.innovation.flights.service.CalendarServiceFactory.getCalendarService;
 import static com.innovation.flights.service.GmailServiceFactory.getGmailService;
 
@@ -22,22 +27,55 @@ public class Runner {
                 .setSingleEvents(true)
                 .execute();
 
-        events.getItems()
+        final List<String> flightNumbers = events.getItems()
                 .stream()
                 .map(Event::getSummary)
                 .map(Runner::extractFlightNumber)
-                .forEach(System.out::println);
+                .collect(Collectors.toList());
 
-        String user = "me";
-        ListLabelsResponse listResponse =
-                getGmailService().users().labels().list(user).execute();
-        List<Label> labels = listResponse.getLabels();
-        if (labels.size() == 0) {
-            System.out.println("No labels found.");
-        } else {
-            System.out.println("Labels:");
-            for (Label label : labels) {
-                System.out.printf("- %s\n", label.getName());
+        System.out.println(flightNumbers);
+
+        for (String flightNumber : flightNumbers) {
+            System.out.println("flightNumber: " + flightNumber);
+
+            final ListMessagesResponse messages = getGmailService()
+                    .users()
+                    .messages()
+                    .list("me")
+                    .setQ(flightNumber)
+                    .execute();
+
+            if (messages.getMessages() != null) {
+                for (Message message : messages.getMessages()) {
+                    String id = message.getId();
+                    System.out.println("id: " + id);
+
+                    final Message foundMessage = getGmailService()
+                            .users()
+                            .messages()
+                            .get("me", id)
+                            .execute();
+
+                    if (foundMessage.getPayload() != null && foundMessage.getPayload().getParts() != null) {
+                        for (MessagePart part : foundMessage.getPayload().getParts()) {
+                            if (part.getFilename() != null && part.getFilename().length() > 0) {
+                                String filename = part.getFilename();
+                                if (filename.contains(flightNumber)) {
+                                    String attId = part.getBody().getAttachmentId();
+
+                                    MessagePartBody attachPart = getGmailService().users().messages().attachments().
+                                            get("me", id, attId).execute();
+
+                                    byte[] fileByteArray = decodeBase64(attachPart.getData());
+                                    FileOutputStream fileOutFile =
+                                            new FileOutputStream("/Users/dev/Downloads/" + filename);
+                                    fileOutFile.write(fileByteArray);
+                                    fileOutFile.close();
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
     }

@@ -20,8 +20,6 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.Set;
 
-import static java.util.Collections.singleton;
-
 public class GoogleServiceFactoryCredentials {
     /**
      * Application name.
